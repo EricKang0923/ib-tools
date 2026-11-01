@@ -8,6 +8,7 @@ let worksheets = [];
 let done = {};
 let notifyChange = () => {};
 let loaded = false;
+const openUnits = new Set();
 
 async function openFile(path) {
   // Open the tab right away: browsers block tabs opened after waiting for the network.
@@ -35,45 +36,13 @@ function render() {
   const list = $('w-list');
   list.replaceChildren();
   const sorted = [...worksheets].sort((a, b) => compareCodes(a.code, b.code));
-  let lastUnit = null;
+  const units = new Map();
   for (const sheet of sorted) {
-    if (unitOf(sheet.code) !== lastUnit) {
-      lastUnit = unitOf(sheet.code);
-      const heading = document.createElement('p');
-      heading.className = 'group-title';
-      heading.textContent = `Unit ${lastUnit}`;
-      list.append(heading);
-    }
-    const row = document.createElement('div');
-    row.className = done[sheet.code] ? 'deadline done' : 'deadline';
-
-    const check = document.createElement('input');
-    check.type = 'checkbox';
-    check.checked = Boolean(done[sheet.code]);
-    check.setAttribute('aria-label', `Mark ${sheet.title} as done`);
-    check.addEventListener('change', () => {
-      if (check.checked) done[sheet.code] = true;
-      else delete done[sheet.code];
-      notifyChange({ worksheets: done });
-      render();
-    });
-
-    const text = document.createElement('div');
-    const title = document.createElement('p');
-    title.className = 'title';
-    title.textContent = sheet.title;
-    const meta = document.createElement('p');
-    meta.className = 'meta';
-    meta.textContent = sheet.code;
-    text.append(title, meta);
-
-    const actions = document.createElement('div');
-    actions.className = 'actions';
-    actions.append(fileButton('Worksheet', sheet.question_file), fileButton('Solutions', sheet.solution_file));
-
-    row.append(check, text, document.createElement('div'), actions);
-    list.append(row);
+    const unit = unitOf(sheet.code);
+    if (!units.has(unit)) units.set(unit, unitSection(unit, sorted));
+    units.get(unit).append(worksheetRow(sheet));
   }
+  list.append(...units.values());
   if (sorted.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'note';
@@ -82,6 +51,58 @@ function render() {
   }
   const finished = sorted.filter((sheet) => done[sheet.code]).length;
   $('w-stats').textContent = sorted.length ? `${finished} of ${sorted.length} done` : '';
+}
+
+// Ticking a worksheet redraws the list, so each unit remembers if it was open.
+function unitSection(unit, sorted) {
+  const sheets = sorted.filter((sheet) => unitOf(sheet.code) === unit);
+  const finished = sheets.filter((sheet) => done[sheet.code]).length;
+  const section = document.createElement('details');
+  section.className = 'unit-group';
+  section.open = openUnits.has(unit);
+  section.addEventListener('toggle', () => {
+    if (section.open) openUnits.add(unit);
+    else openUnits.delete(unit);
+  });
+  const summary = document.createElement('summary');
+  const count = document.createElement('span');
+  count.className = 'summary-note';
+  count.textContent = `${finished} of ${sheets.length} done`;
+  summary.append(`Unit ${unit}`, count);
+  section.append(summary);
+  return section;
+}
+
+function worksheetRow(sheet) {
+  const row = document.createElement('div');
+  row.className = done[sheet.code] ? 'deadline done' : 'deadline';
+
+  const check = document.createElement('input');
+  check.type = 'checkbox';
+  check.checked = Boolean(done[sheet.code]);
+  check.setAttribute('aria-label', `Mark ${sheet.title} as done`);
+  check.addEventListener('change', () => {
+    if (check.checked) done[sheet.code] = true;
+    else delete done[sheet.code];
+    notifyChange({ worksheets: done });
+    render();
+  });
+
+  const text = document.createElement('div');
+  const title = document.createElement('p');
+  title.className = 'title';
+  title.textContent = sheet.title;
+  const meta = document.createElement('p');
+  meta.className = 'meta';
+  meta.textContent = sheet.code;
+  text.append(title, meta);
+
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  actions.append(fileButton('Worksheet', sheet.question_file), fileButton('Solutions', sheet.solution_file));
+
+  row.append(check, text, document.createElement('div'), actions);
+  return row;
 }
 
 async function sha256(file) {
