@@ -132,6 +132,8 @@ export async function openWorksheets() {
     render();
   } catch (error) {
     loaded = false;
+    // The list starts folded, so open it or the message would stay hidden.
+    $('w-section').open = true;
     $('w-error').textContent = `Could not load worksheets: ${error.message}`;
   }
 }
