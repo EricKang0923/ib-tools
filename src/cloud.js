@@ -75,6 +75,31 @@ export async function uploadQuestion(file, question) {
   if (error) throw error;
 }
 
+export async function loadWorksheets() {
+  const { data, error } = await client.from('worksheets').select('code, title, question_file, solution_file');
+  if (error) throw error;
+  return data;
+}
+
+export async function worksheetFileUrl(path) {
+  const { data, error } = await client.storage.from('worksheets').createSignedUrl(path, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export async function uploadWorksheetFile(file, path) {
+  const { error } = await client.storage
+    .from('worksheets')
+    .upload(path, file, { contentType: 'application/pdf' });
+  // The same file may be there already from an earlier upload.
+  if (error && String(error.statusCode) !== '409') throw error;
+}
+
+export async function saveWorksheet(sheet) {
+  const { error } = await client.from('worksheets').upsert(sheet);
+  if (error) throw error;
+}
+
 // If the check itself fails, the user just gets the normal, non-admin screen.
 export async function checkIsAdmin(userId) {
   const { data, error } = await client.from('admins').select('user_id').eq('user_id', userId);
@@ -125,6 +150,8 @@ export async function runSecurityCheck(userId, isAdmin) {
       .from('questions')
       .insert({ id: 'security-check', unit: 'x', paper: 'x', year: 2000, answer: 'x' });
     results.push({ label: 'Regular users cannot add questions', safe: question.error?.code === '42501' });
+    const sheet = await client.from('worksheets').insert({ code: 'security-check', title: 'x' });
+    results.push({ label: 'Regular users cannot add worksheets', safe: sheet.error?.code === '42501' });
   }
   return results;
 }

@@ -51,6 +51,21 @@
 
     <div id="view-practice" class="view" hidden>
       <section>
+        <h2>Math AA worksheets</h2>
+        <p id="w-stats" class="note" role="status"></p>
+        <p id="w-error" class="error" role="alert"></p>
+        <div id="w-list"></div>
+        <p class="note">Solutions for 1.7 are unofficial and were written by AI.</p>
+      </section>
+
+      <details id="w-admin" hidden>
+        <summary>Upload worksheets (admin)</summary>
+        <p class="note">Choose the Math AA PDF files, including the solutions. Other files are skipped.</p>
+        <input id="w-files" type="file" accept="application/pdf" multiple aria-label="Choose worksheet files">
+        <p id="w-upload-status" class="note" role="status"></p>
+      </details>
+
+      <section>
         <h2>Physics Paper 1A</h2>
         <div class="filters">
           <label>Unit <select id="p-unit"></select></label>
@@ -97,6 +112,13 @@
     </div>
 
     <div id="view-deadlines" class="view" hidden>
+      <details id="d-subjects">
+        <summary>My subjects</summary>
+        <p id="d-choose-note" class="note">Choose the subjects you take to see your deadlines.</p>
+        <div id="d-subject-choices" class="subject-choices"></div>
+      </details>
+
+      <div id="d-content" class="view">
       <section class="summary" aria-live="polite">
         <p class="label">Due in 7 days</p>
         <p class="total"><span id="due-soon">0</span><small> tasks</small></p>
@@ -131,6 +153,7 @@
       </section>
 
       <p class="note">If a date changes, the school system is the source of truth.</p>
+      </div>
     </div>
 
     <div id="view-calculator" class="view">

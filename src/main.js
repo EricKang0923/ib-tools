@@ -3,6 +3,7 @@ import { startCalculator } from './app.js';
 import { startDeadlines } from './deadlines-app.js';
 import { openPractice, startPractice } from './practice-app.js';
 import { delayedSaver } from './saver.js';
+import { openWorksheets, startWorksheets } from './worksheets-app.js';
 
 const APPEARANCE_KEY = 'ib-appearance';
 const VIEW_KEY = 'ib-view';
@@ -100,13 +101,24 @@ async function openApp(cloud, user) {
   startDeadlines(saved.deadlines, shared, (deadlines) => saver.change({ deadlines }), {
     addShared: isAdmin ? cloud.addSharedDeadline : null,
   });
-  startPractice(saved.practice, (practice) => saver.change({ practice }), { cloud, isAdmin });
+  // Physics progress and worksheet ticks are saved together, so each keeps the other's data.
+  let practice = { ...saved.practice };
+  const changePractice = (changes) => {
+    practice = { ...practice, ...changes };
+    saver.change({ practice });
+  };
+  startPractice(practice, changePractice, { cloud, isAdmin });
+  startWorksheets(practice.worksheets, changePractice, { cloud, isAdmin });
+  const openPracticeTab = () => {
+    openPractice();
+    openWorksheets();
+  };
   for (const button of document.querySelectorAll('.tabs button')) {
     button.addEventListener('click', () => {
-      if (button.dataset.view === 'practice') openPractice();
+      if (button.dataset.view === 'practice') openPracticeTab();
     });
   }
-  if (!$('view-practice').hidden) openPractice();
+  if (!$('view-practice').hidden) openPracticeTab();
 
   $('account').textContent = user.email;
   document.addEventListener('visibilitychange', () => {

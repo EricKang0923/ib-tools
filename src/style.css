@@ -133,6 +133,15 @@ button { justify-self: start; cursor: pointer; }
 .answer { margin: 12px 0 0; color: var(--accent); font-weight: 700; }
 .practice-actions { flex-wrap: wrap; margin-top: 12px; }
 
+.subject-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.subject-choices label { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 1rem; }
+.subject-choices input { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--accent); }
+
 .view { display: grid; gap: 16px; }
 .view[hidden] { display: none; }
 

@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  SUBJECTS,
+  renameOldSubjects,
+  visibleDeadlines,
   countDueWithin,
   dayLabel,
   daysUntil,
@@ -109,6 +112,49 @@ test('mergeSharedDeadlines adds a school date published later', () => {
   const result = mergeSharedDeadlines([], ['s1'], shared);
   assert.equal(result.items.length, 1);
   assert.deepEqual(result.seenSharedIds, ['s1', 's3']);
+});
+
+test('visibleDeadlines keeps chosen subjects and hides the rest', () => {
+  const items = [item('2026-11-05T10:00', 'Physics'), item('2026-11-06T10:00', 'Biology')];
+  assert.deepEqual(visibleDeadlines(items, ['Physics']).map((i) => i.subject), ['Physics']);
+  assert.equal(visibleDeadlines(items, []).length, 0);
+});
+
+test('visibleDeadlines keeps a subject the user typed themselves', () => {
+  const items = [item('2026-11-05T10:00', 'Driving test')];
+  assert.equal(visibleDeadlines(items, ['Physics']).length, 1);
+});
+
+test('the subject list has unique names and the requested subjects', () => {
+  assert.equal(new Set(SUBJECTS).size, SUBJECTS.length);
+  for (const name of ['French', 'Chinese A', 'Chinese B', 'English A', 'English B', 'Japanese', 'Biology', 'Math AA']) {
+    assert.ok(SUBJECTS.includes(name));
+  }
+  for (const old of ['Math', 'English', 'Chinese']) {
+    assert.ok(!SUBJECTS.includes(old));
+  }
+});
+
+test('renameOldSubjects moves existing Math and English data', () => {
+  const result = renameOldSubjects(
+    [item('2026-11-05T10:00', 'Math'), item('2026-11-06T10:00', 'English', true), item('2026-11-07T10:00', 'Physics')],
+    ['Math', 'English', 'Physics'],
+  );
+  assert.deepEqual(result.items.map((i) => i.subject), ['Math AA', 'English B', 'Physics']);
+  assert.equal(result.items[1].done, true);
+  assert.deepEqual(result.chosenSubjects, ['Math AA', 'English B', 'Physics']);
+  assert.equal(result.changed, true);
+});
+
+test('renameOldSubjects drops the unclear Chinese choice', () => {
+  assert.deepEqual(renameOldSubjects([], ['Chinese', 'TOK']).chosenSubjects, ['TOK']);
+});
+
+test('renameOldSubjects changes nothing in up-to-date data', () => {
+  const items = [item('2026-11-05T10:00', 'Math AA')];
+  const result = renameOldSubjects(items, ['Math AA']);
+  assert.equal(result.changed, false);
+  assert.equal(result.items[0], items[0]);
 });
 
 test('validateDeadline cleans a good entry', () => {

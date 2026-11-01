@@ -1,6 +1,46 @@
 // Deadline logic. No screen code here, so tests can check it directly.
 // Due dates are stored as local time text: "2026-11-04T09:20".
 
+// These names must match the subject on each school date.
+export const SUBJECTS = [
+  'Biology',
+  'Business',
+  'Chemistry',
+  'Chinese A',
+  'Chinese B',
+  'English A',
+  'English B',
+  'French',
+  'Japanese',
+  'Korean',
+  'Math AA',
+  'Physics',
+  'TOK',
+];
+
+// Older data used these names. All existing English dates are English B.
+const RENAMED = { Math: 'Math AA', English: 'English B' };
+
+// Updates old subject names in saved data. "Chinese" is dropped from the chosen list
+// because it could mean A or B, so the user picks again. No dates used that name.
+export function renameOldSubjects(items, chosenSubjects) {
+  const newItems = items.map((item) => (
+    RENAMED[item.subject] ? { ...item, subject: RENAMED[item.subject] } : item
+  ));
+  const newChosen = chosenSubjects
+    .filter((name) => name !== 'Chinese')
+    .map((name) => RENAMED[name] ?? name);
+  const changed = newItems.some((item, i) => item !== items[i])
+    || newChosen.join() !== chosenSubjects.join();
+  return { items: newItems, chosenSubjects: newChosen, changed };
+}
+
+// Shows the chosen subjects. Anything under a subject name the user typed themselves
+// stays visible, because it isn't on the list and so can't be chosen or hidden.
+export function visibleDeadlines(items, chosen) {
+  return items.filter((item) => chosen.includes(item.subject) || !SUBJECTS.includes(item.subject));
+}
+
 export function parseDue(due) {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(due ?? '');
   if (!match) return null;

@@ -1,25 +1,29 @@
 // Deadline screen.
 import {
+  SUBJECTS,
   countDueWithin,
   dayLabel,
   groupDeadlines,
   isOverdue,
   mergeSharedDeadlines,
+  renameOldSubjects,
   sortByDue,
   subjectsOf,
   validateDeadline,
+  visibleDeadlines,
 } from './deadlines.js';
 
 const $ = (id) => document.getElementById(id);
 
 let items = [];
 let seenSharedIds = [];
+let chosenSubjects = [];
 let editingId = null;
 let notifyChange = () => {};
 let addShared = null;
 
 function changed() {
-  notifyChange({ items, seenSharedIds });
+  notifyChange({ items, seenSharedIds, chosenSubjects });
 }
 
 function formatDue(due) {
@@ -88,16 +92,43 @@ function renderGroup(container, label, list, now, late = false) {
 function renderFilter() {
   const select = $('d-filter');
   const current = select.value;
-  const subjects = subjectsOf(items);
+  const subjects = subjectsOf(visibleDeadlines(items, chosenSubjects));
   select.replaceChildren(new Option('All', ''), ...subjects.map((name) => new Option(name, name)));
   select.value = subjects.includes(current) ? current : '';
-  $('subject-list').replaceChildren(...subjects.map((name) => new Option(name)));
+  $('subject-list').replaceChildren(...SUBJECTS.map((name) => new Option(name)));
+}
+
+function renderSubjectChoices() {
+  $('d-subject-choices').replaceChildren(...SUBJECTS.map((name) => {
+    const label = document.createElement('label');
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = chosenSubjects.includes(name);
+    box.addEventListener('change', () => {
+      chosenSubjects = box.checked
+        ? [...chosenSubjects, name]
+        : chosenSubjects.filter((subject) => subject !== name);
+      changed();
+      render();
+    });
+    label.append(box, ` ${name}`);
+    return label;
+  }));
 }
 
 function render() {
   const now = new Date();
+  // Until a subject is chosen, the page only asks for subjects.
+  const ready = chosenSubjects.length > 0;
+  $('d-content').hidden = !ready;
+  $('d-choose-note').hidden = ready;
+  if (!ready) {
+    $('d-subjects').open = true;
+    return;
+  }
   renderFilter();
-  const groups = groupDeadlines(items, now, $('d-filter').value);
+  const visible = visibleDeadlines(items, chosenSubjects);
+  const groups = groupDeadlines(visible, now, $('d-filter').value);
   const lists = $('deadline-lists');
   lists.replaceChildren();
   renderGroup(lists, 'Overdue', groups.overdue, now, true);
@@ -106,12 +137,12 @@ function render() {
   if (lists.childElementCount === 0) {
     const empty = document.createElement('p');
     empty.className = 'note';
-    empty.textContent = 'No deadlines yet. Add one above.';
+    empty.textContent = 'No deadlines for these subjects yet. Add one above.';
     lists.append(empty);
   }
 
-  $('due-soon').textContent = countDueWithin(items, now, 7);
-  const next = sortByDue(items).find((item) => !item.done && !isOverdue(item, now));
+  $('due-soon').textContent = countDueWithin(visible, now, 7);
+  const next = sortByDue(visible).find((item) => !item.done && !isOverdue(item, now));
   $('next-due').textContent = next ? `Next: ${next.title} (${dayLabel(next, now)})` : '';
 }
 
@@ -146,9 +177,12 @@ export function startDeadlines(saved, shared, onChange, options = {}) {
   addShared = options.addShared ?? null;
   $('d-share-row').hidden = !addShared;
   const merged = mergeSharedDeadlines(saved.items ?? [], saved.seenSharedIds ?? [], shared);
-  items = merged.items;
+  const renamed = renameOldSubjects(merged.items, saved.chosenSubjects ?? []);
+  items = renamed.items;
   seenSharedIds = merged.seenSharedIds;
-  if (merged.added > 0) changed();
+  chosenSubjects = renamed.chosenSubjects;
+  renderSubjectChoices();
+  if (merged.added > 0 || renamed.changed) changed();
 
   $('deadline-form').addEventListener('submit', async (event) => {
     event.preventDefault();
