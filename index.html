@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IB 도구</title>
+  <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+  <main>
+    <header class="top">
+      <h1>IB 도구</h1>
+      <div class="settings">
+        <label>화면
+          <select id="theme">
+            <option value="system">기기 설정</option>
+            <option value="light">밝게</option>
+            <option value="dark">어둡게</option>
+          </select>
+        </label>
+        <label>색상
+          <select id="accent">
+            <option value="blue">파랑</option>
+            <option value="green">초록</option>
+            <option value="purple">보라</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <p id="loading" class="note">불러오는 중...</p>
+
+    <section id="login-screen" hidden>
+      <h2>로그인</h2>
+      <form id="login-form" class="login-form">
+        <label>이메일 <input id="email" type="email" autocomplete="username" required></label>
+        <label>비밀번호 <input id="password" type="password" autocomplete="current-password" required></label>
+        <button id="login-button" type="submit" class="primary">로그인</button>
+      </form>
+      <p id="login-error" class="error" role="alert"></p>
+      <p class="note">계정은 관리자가 만들어 드려요. 로그인 후 비밀번호를 바꿔주세요.</p>
+      <p class="note">성적과 마감일은 본인과 관리자만 볼 수 있어요. 관리자는 데이터베이스 관리 화면에서 내용을 볼 수 있어요.</p>
+    </section>
+
+    <div id="app-screen" class="view" hidden>
+    <nav class="tabs" aria-label="도구 선택">
+      <button type="button" data-view="calculator">점수 계산기</button>
+      <button type="button" data-view="deadlines">마감일</button>
+    </nav>
+
+    <div id="view-deadlines" class="view" hidden>
+      <section class="summary" aria-live="polite">
+        <p class="label">7일 안에 할 일</p>
+        <p class="total"><span id="due-soon">0</span><small> 개</small></p>
+        <p id="next-due" class="note"></p>
+      </section>
+
+      <section>
+        <h2 id="form-title">마감일 추가</h2>
+        <form id="deadline-form" class="deadline-form" novalidate>
+          <label>할 일 <input id="d-title" autocomplete="off"></label>
+          <label>과목 <input id="d-subject" list="subject-list" autocomplete="off"></label>
+          <datalist id="subject-list"></datalist>
+          <label>날짜 <input id="d-date" type="date"></label>
+          <label>시간 <input id="d-time" type="time"></label>
+          <label id="d-share-row" class="share-row" hidden>
+            <input id="d-share" type="checkbox"> 모든 사용자에게 공유 (학교 일정)
+          </label>
+          <div class="form-actions">
+            <button id="d-save" type="submit" class="primary">추가</button>
+            <button id="d-cancel" type="button" hidden>취소</button>
+          </div>
+        </form>
+        <p id="d-error" class="error" role="alert"></p>
+      </section>
+
+      <section>
+        <div class="list-head">
+          <h2>목록</h2>
+          <label>과목 <select id="d-filter"></select></label>
+        </div>
+        <div id="deadline-lists"></div>
+      </section>
+
+      <p class="note">날짜가 바뀌면 학교 시스템이 기준이에요.</p>
+    </div>
+
+    <div id="view-calculator" class="view">
+    <section class="summary" aria-live="polite">
+      <div>
+        <p class="label">예상 총점</p>
+        <p class="total"><span id="total">-</span><small> / 45</small></p>
+      </div>
+      <p id="breakdown" class="note"></p>
+      <label class="target">목표 점수
+        <input id="target" type="number" min="0" max="45" inputmode="numeric">
+      </label>
+      <p id="target-result" class="note"></p>
+    </section>
+
+    <section>
+      <h2>과목</h2>
+      <p class="note">과목 이름과 시험 점수를 적으세요. 점수는 쉼표로 구분해요. 예: 92, 80, 76</p>
+      <div id="subjects"></div>
+    </section>
+
+    <section>
+      <h2>TOK와 EE</h2>
+      <div class="core">
+        <label>TOK <select id="tok"></select></label>
+        <label>EE <select id="ee"></select></label>
+      </div>
+      <p class="note">보너스 표는 공식 IB 문서로 전체를 확인하지 못했어요. C, D 등급의 결과는 학교에 확인하세요.</p>
+    </section>
+
+    <details>
+      <summary>점수 기준 바꾸기</summary>
+      <p class="note">각 점수에 필요한 최소 퍼센트예요. 학교 내신 기준이며 공식 IB 기준이 아니에요.</p>
+      <div id="cutoffs"></div>
+      <p id="cutoff-error" class="error" role="alert"></p>
+    </details>
+
+    <button id="reset" type="button">입력 내용 모두 지우기</button>
+    </div>
+
+    <details>
+      <summary>계정</summary>
+      <p class="note"><span id="account"></span></p>
+      <p class="note">성적과 마감일은 본인과 관리자만 볼 수 있어요. 관리자는 데이터베이스 관리 화면에서 내용을 볼 수 있어요.</p>
+      <form id="password-form" class="login-form">
+        <label>새 비밀번호 <input id="new-password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <button type="submit">비밀번호 바꾸기</button>
+      </form>
+      <p id="password-message" class="note" role="status"></p>
+      <button id="security-check" type="button">보안 점검</button>
+      <ul id="security-results" class="note"></ul>
+      <button id="logout" type="button">로그아웃</button>
+    </details>
+    <p id="save-status" class="note" role="status"></p>
+    </div>
+  </main>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
