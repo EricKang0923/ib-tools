@@ -36,8 +36,8 @@ function buildSubjects() {
     row.className = 'subject';
 
     const name = document.createElement('input');
-    name.setAttribute('aria-label', `과목 ${i + 1} 이름`);
-    name.placeholder = '예: Physics HL';
+    name.setAttribute('aria-label', `Subject ${i + 1} name`);
+    name.placeholder = 'e.g. Physics HL';
     name.value = subject.name;
     name.addEventListener('input', () => {
       subject.name = name.value;
@@ -46,7 +46,7 @@ function buildSubjects() {
 
     const scores = document.createElement('input');
     scores.className = 'scores';
-    scores.setAttribute('aria-label', `과목 ${i + 1} 점수`);
+    scores.setAttribute('aria-label', `Subject ${i + 1} scores`);
     scores.placeholder = '92, 80, 76';
     scores.value = subject.scores;
     scores.addEventListener('input', () => {
@@ -73,7 +73,7 @@ function buildSubjects() {
 }
 
 function buildGradeSelect(select, value, onChange) {
-  select.replaceChildren(new Option('선택', ''), ...GRADES.map((grade) => new Option(grade, grade)));
+  select.replaceChildren(new Option('Select', ''), ...GRADES.map((grade) => new Option(grade, grade)));
   select.value = value;
   select.onchange = () => onChange(select.value);
 }
@@ -82,7 +82,7 @@ function buildCutoffs() {
   $('cutoffs').replaceChildren();
   state.cutoffs.forEach((cutoff) => {
     const label = document.createElement('label');
-    label.textContent = `${cutoff.mark}점 (%)`;
+    label.textContent = `Mark ${cutoff.mark} (%)`;
     const input = document.createElement('input');
     input.type = 'number';
     input.min = '0';
@@ -102,7 +102,7 @@ function buildCutoffs() {
 
 function update() {
   const valid = cutoffsAreValid(state.cutoffs);
-  $('cutoff-error').textContent = valid ? '' : '높은 점수일수록 퍼센트도 높아야 하고, 값은 0~100 사이여야 해요.';
+  $('cutoff-error').textContent = valid ? '' : 'Higher marks need higher percentages, and values must be from 0 to 100.';
 
   const marks = state.subjects.map((subject, i) => {
     const { scores, invalid } = parseScores(subject.scores);
@@ -112,12 +112,12 @@ function update() {
     const row = rows[i];
 
     row.mark.textContent = mark ?? '-';
-    row.avg.textContent = percent === null ? '' : `평균 ${percent.toFixed(2)}%`;
+    row.avg.textContent = percent === null ? '' : `Average ${percent.toFixed(2)}%`;
     row.detail.classList.toggle('error', invalid.length > 0);
     if (invalid.length > 0) {
-      row.detail.textContent = `계산에서 뺀 값: ${invalid.join(', ')} (0~100 숫자만 가능해요)`;
+      row.detail.textContent = `Left out: ${invalid.join(', ')} (only numbers from 0 to 100 count)`;
     } else if (next) {
-      row.detail.textContent = `${next.mark}점까지 ${next.gap.toFixed(2)}% 남음`;
+      row.detail.textContent = `${next.gap.toFixed(2)}% to a ${next.mark}`;
     } else {
       row.detail.textContent = '';
     }
@@ -128,24 +128,24 @@ function update() {
   $('total').textContent = result.total ?? '-';
 
   if (result.failing) {
-    $('breakdown').textContent = 'TOK 또는 EE의 E는 디플로마 탈락 조건이에요.';
+    $('breakdown').textContent = 'An E in TOK or EE is a failing condition for the diploma.';
   } else if (result.total === null) {
     const missing = marks.filter((mark) => mark === null).length;
     const parts = [];
-    if (missing > 0) parts.push(`과목 ${missing}개`);
-    if (!state.tok || !state.ee) parts.push('TOK와 EE');
-    $('breakdown').textContent = `입력 필요: ${parts.join(', ') || '점수 기준 확인'}`;
+    if (missing > 0) parts.push(`${missing} subject${missing === 1 ? '' : 's'}`);
+    if (!state.tok || !state.ee) parts.push('TOK and EE');
+    $('breakdown').textContent = `Still needed: ${parts.join(', ') || 'check the grade cutoffs'}`;
   } else {
-    $('breakdown').textContent = `과목 ${result.subjectTotal}점 + 보너스 ${result.core}점. 학교 내신 기준의 추정치예요.`;
+    $('breakdown').textContent = `${result.subjectTotal} from subjects + ${result.core} bonus. An estimate based on school cutoffs.`;
   }
 
   const target = state.target === '' ? null : Number(state.target);
   if (target === null || result.total === null) {
     $('target-result').textContent = '';
   } else if (result.total >= target) {
-    $('target-result').textContent = `목표보다 ${result.total - target}점 높아요.`;
+    $('target-result').textContent = `${result.total - target} above your target.`;
   } else {
-    $('target-result').textContent = `목표까지 ${target - result.total}점 남았어요.`;
+    $('target-result').textContent = `${target - result.total} below your target.`;
   }
 }
 
@@ -169,7 +169,7 @@ export function startCalculator(saved, onChange) {
   });
 
   $('reset').addEventListener('click', () => {
-    if (!window.confirm('입력한 과목, 점수, 목표를 모두 지울까요?')) return;
+    if (!window.confirm('Clear all subjects, scores and your target?')) return;
     state = emptyState();
     buildAll();
     notifyChange(state);

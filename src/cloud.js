@@ -29,17 +29,50 @@ export async function changePassword(password) {
 export async function loadUserData(userId) {
   const { data, error } = await client
     .from('user_data')
-    .select('calculator, deadlines')
+    .select('calculator, deadlines, practice')
     .eq('user_id', userId)
     .maybeSingle();
   if (error) throw error;
-  return data ?? { calculator: {}, deadlines: {} };
+  return data ?? { calculator: {}, deadlines: {}, practice: {} };
 }
 
 export async function loadSharedDeadlines() {
   const { data, error } = await client.from('shared_deadlines').select('id, title, subject, due');
   if (error) throw error;
   return data;
+}
+
+// The database returns at most 1,000 rows at a time, so ask page by page.
+export async function loadQuestions() {
+  const pageSize = 1000;
+  const all = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await client
+      .from('questions')
+      .select('id, unit, topic, paper, year, answer')
+      .order('id')
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    all.push(...data);
+    if (data.length < pageSize) return all;
+  }
+}
+
+// The link stops working after an hour, so it can't be passed around.
+export async function questionImageUrl(id) {
+  const { data, error } = await client.storage.from('questions').createSignedUrl(`${id}.png`, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export async function uploadQuestion(file, question) {
+  const { error: uploadError } = await client.storage
+    .from('questions')
+    .upload(`${question.id}.png`, file, { contentType: 'image/png' });
+  // An earlier interrupted upload may have stored the image already.
+  if (uploadError && String(uploadError.statusCode) !== '409') throw uploadError;
+  const { error } = await client.from('questions').insert(question);
+  if (error) throw error;
 }
 
 // If the check itself fails, the user just gets the normal, non-admin screen.
@@ -75,11 +108,11 @@ export async function runSecurityCheck(userId, isAdmin) {
   const madeAdmin = await client.from('admins').insert({ user_id: userId });
 
   const results = [
-    { label: '다른 사람의 데이터가 보이지 않아요', safe: !others.error && others.data.length === 0 },
+    { label: 'Other users\' data is not visible', safe: !others.error && others.data.length === 0 },
     // 42501 means the rules refused it, not that something else went wrong.
-    { label: '다른 사람 이름으로 저장할 수 없어요', safe: write.error?.code === '42501' },
-    { label: '다른 사람의 데이터를 바꿀 수 없어요', safe: !change.error && change.data.length === 0 },
-    { label: '스스로 관리자가 될 수 없어요', safe: madeAdmin.error?.code === '42501' },
+    { label: 'Cannot save as another user', safe: write.error?.code === '42501' },
+    { label: 'Cannot change other users\' data', safe: !change.error && change.data.length === 0 },
+    { label: 'Cannot make yourself an admin', safe: madeAdmin.error?.code === '42501' },
   ];
 
   // This attempt would really succeed for the admin, so only run it for others.
@@ -87,7 +120,11 @@ export async function runSecurityCheck(userId, isAdmin) {
     const school = await client
       .from('shared_deadlines')
       .insert({ id: 'security-check', title: 'x', subject: 'x', due: '2026-01-01T00:00' });
-    results.push({ label: '일반 사용자는 공유 일정을 추가할 수 없어요', safe: school.error?.code === '42501' });
+    results.push({ label: 'Regular users cannot add shared dates', safe: school.error?.code === '42501' });
+    const question = await client
+      .from('questions')
+      .insert({ id: 'security-check', unit: 'x', paper: 'x', year: 2000, answer: 'x' });
+    results.push({ label: 'Regular users cannot add questions', safe: question.error?.code === '42501' });
   }
   return results;
 }

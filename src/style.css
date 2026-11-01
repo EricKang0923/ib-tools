@@ -126,6 +126,13 @@ button { justify-self: start; cursor: pointer; }
 #account { overflow-wrap: anywhere; }
 [hidden] { display: none !important; }
 
+.filters { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+.filters select { display: block; margin-top: 2px; }
+/* Question images are black on white, so they stay readable in dark mode too. */
+.question-image { display: block; width: 100%; height: auto; margin-top: 8px; padding: 8px; background: #fff; border-radius: 6px; }
+.answer { margin: 12px 0 0; color: var(--accent); font-weight: 700; }
+.practice-actions { flex-wrap: wrap; margin-top: 12px; }
+
 .view { display: grid; gap: 16px; }
 .view[hidden] { display: none; }
 

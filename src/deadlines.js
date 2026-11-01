@@ -26,7 +26,7 @@ export function isOverdue(item, now) {
 
 export function dayLabel(item, now) {
   const days = daysUntil(item.due, now);
-  if (days === 0) return isOverdue(item, now) ? '오늘, 시간 지남' : '오늘';
+  if (days === 0) return isOverdue(item, now) ? 'Today, past due' : 'Today';
   return days > 0 ? `D-${days}` : `D+${-days}`;
 }
 
@@ -69,13 +69,13 @@ export function mergeSharedDeadlines(items, seenSharedIds, shared) {
   };
 }
 
-// Returns a clean deadline, or a Korean error message to show the user.
+// Returns a clean deadline, or an error message to show the user.
 export function validateDeadline({ title, subject, date, time }) {
   const cleanTitle = (title ?? '').trim();
   const cleanSubject = (subject ?? '').trim();
-  if (!cleanTitle) return { error: '할 일을 적어주세요.' };
-  if (!cleanSubject) return { error: '과목을 적어주세요.' };
+  if (!cleanTitle) return { error: 'Please enter a task.' };
+  if (!cleanSubject) return { error: 'Please enter a subject.' };
   const due = `${date}T${time || '23:59'}`;
-  if (!parseDue(due)) return { error: '날짜와 시간을 확인해 주세요.' };
+  if (!parseDue(due)) return { error: 'Please check the date and time.' };
   return { value: { title: cleanTitle, subject: cleanSubject, due } };
 }

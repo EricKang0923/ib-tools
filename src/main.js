@@ -1,6 +1,7 @@
 // Starts the app: appearance, tabs, login, and saving to the cloud.
 import { startCalculator } from './app.js';
 import { startDeadlines } from './deadlines-app.js';
+import { openPractice, startPractice } from './practice-app.js';
 import { delayedSaver } from './saver.js';
 
 const APPEARANCE_KEY = 'ib-appearance';
@@ -74,14 +75,14 @@ function showFatal(message) {
 }
 
 const SAVE_TEXT = {
-  saving: '저장 중...',
-  saved: '저장됨',
-  failed: '저장 실패. 인터넷을 확인해 주세요. 다음 변경 때 다시 시도해요.',
+  saving: 'Saving...',
+  saved: 'Saved',
+  failed: 'Could not save. Check your internet. It will try again on your next change.',
 };
 
 async function openApp(cloud, user) {
   showScreen('loading');
-  $('loading').textContent = '불러오는 중...';
+  $('loading').textContent = 'Loading...';
   const [saved, shared, isAdmin] = await Promise.all([
     cloud.loadUserData(user.id),
     cloud.loadSharedDeadlines(),
@@ -99,6 +100,13 @@ async function openApp(cloud, user) {
   startDeadlines(saved.deadlines, shared, (deadlines) => saver.change({ deadlines }), {
     addShared: isAdmin ? cloud.addSharedDeadline : null,
   });
+  startPractice(saved.practice, (practice) => saver.change({ practice }), { cloud, isAdmin });
+  for (const button of document.querySelectorAll('.tabs button')) {
+    button.addEventListener('click', () => {
+      if (button.dataset.view === 'practice') openPractice();
+    });
+  }
+  if (!$('view-practice').hidden) openPractice();
 
   $('account').textContent = user.email;
   document.addEventListener('visibilitychange', () => {
@@ -116,18 +124,18 @@ async function openApp(cloud, user) {
     try {
       await cloud.changePassword($('new-password').value);
       $('new-password').value = '';
-      message.textContent = '비밀번호를 바꿨어요.';
+      message.textContent = 'Password changed.';
     } catch (error) {
-      message.textContent = `바꾸지 못했어요: ${error.message}`;
+      message.textContent = `Could not change it: ${error.message}`;
     }
   };
   $('security-check').onclick = async () => {
     const list = $('security-results');
-    list.textContent = '확인 중...';
+    list.textContent = 'Checking...';
     const results = await cloud.runSecurityCheck(user.id, isAdmin);
     list.replaceChildren(...results.map(({ label, safe }) => {
       const item = document.createElement('li');
-      item.textContent = `${safe ? '통과' : '문제 있음'}: ${label}`;
+      item.textContent = `${safe ? 'Pass' : 'PROBLEM'}: ${label}`;
       item.className = safe ? '' : 'error';
       return item;
     }));
@@ -149,8 +157,8 @@ function setUpLogin(cloud) {
       showScreen('login');
       const wrongLogin = error.code === 'invalid_credentials' || error.status === 400;
       $('login-error').textContent = wrongLogin
-        ? '이메일 또는 비밀번호가 맞지 않아요.'
-        : `로그인하지 못했어요: ${error.message}`;
+        ? 'Wrong email or password.'
+        : `Could not log in: ${error.message}`;
     } finally {
       $('login-button').disabled = false;
     }
@@ -162,7 +170,7 @@ async function start() {
   for (const button of document.querySelectorAll('.tabs button')) {
     button.addEventListener('click', () => showView(button.dataset.view));
   }
-  showView(read(VIEW_KEY) === 'deadlines' ? 'deadlines' : 'calculator');
+  showView(['deadlines', 'practice'].includes(read(VIEW_KEY)) ? read(VIEW_KEY) : 'calculator');
 
   // The older version kept grades in this browser. They now live in the account.
   try {
@@ -176,7 +184,7 @@ async function start() {
   try {
     cloud = await import('./cloud.js');
   } catch {
-    showFatal('로그인 기능을 불러오지 못했어요. 인터넷을 확인하고 새로고침해 주세요.');
+    showFatal('Could not load the login. Check your internet and refresh.');
     return;
   }
 
@@ -186,7 +194,7 @@ async function start() {
     if (user) await openApp(cloud, user);
     else showScreen('login');
   } catch (error) {
-    showFatal(`데이터를 불러오지 못했어요. 새로고침해 주세요. (${error.message})`);
+    showFatal(`Could not load your data. Please refresh. (${error.message})`);
   }
 }
 

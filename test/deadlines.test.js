@@ -42,8 +42,8 @@ test('isOverdue uses the time, and done items are never overdue', () => {
 
 test('dayLabel shows future, today and past', () => {
   assert.equal(dayLabel(item('2026-11-04T09:20'), now), 'D-2');
-  assert.equal(dayLabel(item('2026-11-02T18:00'), now), '오늘');
-  assert.equal(dayLabel(item('2026-11-02T09:00'), now), '오늘, 시간 지남');
+  assert.equal(dayLabel(item('2026-11-02T18:00'), now), 'Today');
+  assert.equal(dayLabel(item('2026-11-02T09:00'), now), 'Today, past due');
   assert.equal(dayLabel(item('2026-10-31T09:00'), now), 'D+2');
 });
 

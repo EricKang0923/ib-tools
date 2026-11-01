@@ -35,7 +35,7 @@ function renderItem(item, now) {
   const check = document.createElement('input');
   check.type = 'checkbox';
   check.checked = item.done;
-  check.setAttribute('aria-label', `${item.title} 완료`);
+  check.setAttribute('aria-label', `Mark ${item.title} as done`);
   check.addEventListener('change', () => {
     item.done = check.checked;
     changed();
@@ -53,19 +53,19 @@ function renderItem(item, now) {
 
   const day = document.createElement('div');
   day.className = isOverdue(item, now) ? 'day late' : 'day';
-  day.textContent = item.done ? '완료' : dayLabel(item, now);
+  day.textContent = item.done ? 'Done' : dayLabel(item, now);
 
   const actions = document.createElement('div');
   actions.className = 'actions';
   const edit = document.createElement('button');
   edit.type = 'button';
-  edit.textContent = '수정';
+  edit.textContent = 'Edit';
   edit.addEventListener('click', () => startEdit(item));
   const remove = document.createElement('button');
   remove.type = 'button';
-  remove.textContent = '삭제';
+  remove.textContent = 'Delete';
   remove.addEventListener('click', () => {
-    if (!window.confirm(`"${item.title}"을(를) 삭제할까요?`)) return;
+    if (!window.confirm(`Delete "${item.title}"?`)) return;
     items = items.filter((other) => other.id !== item.id);
     if (editingId === item.id) resetForm();
     changed();
@@ -89,7 +89,7 @@ function renderFilter() {
   const select = $('d-filter');
   const current = select.value;
   const subjects = subjectsOf(items);
-  select.replaceChildren(new Option('전체', ''), ...subjects.map((name) => new Option(name, name)));
+  select.replaceChildren(new Option('All', ''), ...subjects.map((name) => new Option(name, name)));
   select.value = subjects.includes(current) ? current : '';
   $('subject-list').replaceChildren(...subjects.map((name) => new Option(name)));
 }
@@ -100,19 +100,19 @@ function render() {
   const groups = groupDeadlines(items, now, $('d-filter').value);
   const lists = $('deadline-lists');
   lists.replaceChildren();
-  renderGroup(lists, '기한 지남', groups.overdue, now, true);
-  renderGroup(lists, '예정', groups.upcoming, now);
-  renderGroup(lists, '완료', groups.done, now);
+  renderGroup(lists, 'Overdue', groups.overdue, now, true);
+  renderGroup(lists, 'Upcoming', groups.upcoming, now);
+  renderGroup(lists, 'Done', groups.done, now);
   if (lists.childElementCount === 0) {
     const empty = document.createElement('p');
     empty.className = 'note';
-    empty.textContent = '아직 마감일이 없어요. 위에서 추가하세요.';
+    empty.textContent = 'No deadlines yet. Add one above.';
     lists.append(empty);
   }
 
   $('due-soon').textContent = countDueWithin(items, now, 7);
   const next = sortByDue(items).find((item) => !item.done && !isOverdue(item, now));
-  $('next-due').textContent = next ? `다음: ${next.title} (${dayLabel(next, now)})` : '';
+  $('next-due').textContent = next ? `Next: ${next.title} (${dayLabel(next, now)})` : '';
 }
 
 function startEdit(item) {
@@ -122,8 +122,8 @@ function startEdit(item) {
   $('d-subject').value = item.subject;
   $('d-date').value = date;
   $('d-time').value = time;
-  $('form-title').textContent = '마감일 수정';
-  $('d-save').textContent = '저장';
+  $('form-title').textContent = 'Edit deadline';
+  $('d-save').textContent = 'Save';
   $('d-cancel').hidden = false;
   $('d-share-row').hidden = true;
   $('d-error').textContent = '';
@@ -134,8 +134,8 @@ function startEdit(item) {
 function resetForm() {
   editingId = null;
   $('deadline-form').reset();
-  $('form-title').textContent = '마감일 추가';
-  $('d-save').textContent = '추가';
+  $('form-title').textContent = 'Add a deadline';
+  $('d-save').textContent = 'Add';
   $('d-cancel').hidden = true;
   $('d-share-row').hidden = !addShared;
   $('d-error').textContent = '';
@@ -170,7 +170,7 @@ export function startDeadlines(saved, shared, onChange, options = {}) {
       try {
         await addShared({ id, ...value });
       } catch (shareError) {
-        $('d-error').textContent = `공유하지 못했어요: ${shareError.message}`;
+        $('d-error').textContent = `Could not share: ${shareError.message}`;
         return;
       } finally {
         $('d-save').disabled = false;
