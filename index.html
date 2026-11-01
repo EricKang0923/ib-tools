@@ -64,9 +64,43 @@
         <p id="w-upload-status" class="note" role="status"></p>
       </details>
 
+      <details id="n-section">
+        <summary>Chemistry notes <span id="n-stats" class="summary-note" role="status"></span></summary>
+        <p id="n-error" class="error" role="alert"></p>
+        <div id="n-list"></div>
+      </details>
+
+      <details id="n-admin" hidden>
+        <summary>Upload Chemistry notes (admin)</summary>
+        <p class="note">Choose the notes folder to upload it. Files already uploaded are skipped.</p>
+        <input id="n-folder" type="file" webkitdirectory multiple aria-label="Choose notes folder">
+        <p id="n-upload-status" class="note" role="status"></p>
+      </details>
+
       <section>
-        <h2>Physics Paper 1A</h2>
+        <h2>Practice questions</h2>
         <div class="filters">
+          <label>Subject
+            <select id="p-subject">
+              <option value="Physics">Physics Paper 1A</option>
+              <option value="Chemistry">Chemistry</option>
+            </select>
+          </label>
+          <label id="p-paper-row" hidden>Paper
+            <select id="p-paper">
+              <option value="">All</option>
+              <option value="1-A">Paper 1A</option>
+              <option value="1-B">Paper 1B</option>
+              <option value="2">Paper 2</option>
+            </select>
+          </label>
+          <label id="p-level-row" hidden>Level
+            <select id="p-level">
+              <option value="">All</option>
+              <option value="SL">SL</option>
+              <option value="HL">HL</option>
+            </select>
+          </label>
           <label>Unit <select id="p-unit"></select></label>
           <label>Status
             <select id="p-status">
@@ -75,7 +109,7 @@
               <option value="wrong">Wrong</option>
             </select>
           </label>
-          <label>Year
+          <label id="p-year-row">Year
             <select id="p-year">
               <option value="0">All</option>
               <option value="2016">2016 onward</option>
@@ -91,6 +125,9 @@
         <img id="p-image" class="question-image" alt="" hidden>
         <p id="p-error" class="error" role="alert"></p>
         <p id="p-answer" class="answer" hidden></p>
+        <img id="p-answer-image" class="question-image" alt="" hidden>
+        <p id="p-report-label" class="group-title" hidden>Examiner report</p>
+        <img id="p-report-image" class="question-image" alt="" hidden>
         <div class="form-actions practice-actions">
           <button id="p-reveal" type="button" class="primary">Show answer</button>
           <span id="p-mark" class="form-actions" hidden>
@@ -99,7 +136,7 @@
           </span>
           <button id="p-next" type="button">Another question</button>
         </div>
-        <p class="note">Older questions may not match the current syllabus. Answers come from the file names and were not checked against official mark schemes.</p>
+        <p id="p-note" class="note"></p>
       </section>
 
       <details id="p-admin" hidden>
@@ -107,6 +144,9 @@
         <p class="note">Choose the question folder to upload it. Questions already uploaded are skipped.</p>
         <input id="p-folder" type="file" webkitdirectory multiple aria-label="Choose question folder">
         <p id="p-upload-status" class="note" role="status"></p>
+        <p class="note">Chemistry: choose the folder of split questions.</p>
+        <input id="p-chem-folder" type="file" webkitdirectory multiple aria-label="Choose Chemistry question folder">
+        <p id="p-chem-status" class="note" role="status"></p>
       </details>
     </div>
 

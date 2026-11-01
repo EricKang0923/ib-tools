@@ -24,13 +24,38 @@ export function parseQuestionPath(relativePath) {
   return { ...parsed, unit: parts[1], topic: parts.slice(2, -1).join(' / ') };
 }
 
+// Turns one entry of a split-questions manifest into a database row.
+export function rowFromManifest(entry) {
+  return {
+    id: entry.id,
+    subject: entry.subject,
+    unit: entry.topic,
+    topic: entry.subtopic ?? '',
+    paper: entry.source,
+    year: 0,
+    answer: entry.letter ?? '',
+    paper_type: entry.paper,
+    levels: entry.levels,
+    has_answer_image: Boolean(entry.files.answer),
+    has_report: Boolean(entry.files.report),
+  };
+}
+
 export function unitsOf(questions) {
   return [...new Set(questions.map((question) => question.unit))].sort();
 }
 
 // status is 'all', 'new' (not tried) or 'wrong' (last attempt was wrong).
-export function filterQuestions(questions, progress, unit, status, minYear = 0) {
+// extra can narrow by subject, paper type and level. 'HL' includes 'HL only' questions.
+export function filterQuestions(questions, progress, unit, status, minYear = 0, extra = {}) {
   return questions.filter((question) => {
+    if (extra.subject && question.subject !== extra.subject) return false;
+    if (extra.paperType && question.paper_type !== extra.paperType) return false;
+    if (extra.level) {
+      const levels = question.levels ?? [];
+      const fits = extra.level === 'HL' ? levels.includes('HL') || levels.includes('HL only') : levels.includes(extra.level);
+      if (!fits) return false;
+    }
     if (unit && question.unit !== unit) return false;
     if (question.year < minYear) return false;
     const result = progress[question.id]?.result;

@@ -65,6 +65,7 @@ section, details {
 }
 
 summary { cursor: pointer; font-weight: 600; }
+.note-button { display: block; width: 100%; margin-top: 8px; text-align: left; }
 .unit-group { margin-top: 8px; padding: 10px 12px; border-radius: 6px; }
 .summary-note { margin-left: 6px; color: var(--muted); font-size: 0.875rem; font-weight: 400; }
 

@@ -25,6 +25,14 @@ export function groupWorksheetFiles(files) {
   return { groups: [...groups.values()], skipped };
 }
 
+// Reads a notes file path inside the chosen folder: "SME/The Ionic Model group/Title.pdf".
+export function parseNotePath(relativePath) {
+  const parts = relativePath.split('/');
+  const fileName = parts.at(-1);
+  if (parts.length < 3 || parts.includes('__MACOSX') || fileName.startsWith('._') || !/\.pdf$/i.test(fileName)) return null;
+  return { group: parts.at(-2).trim(), title: fileName.replace(/\.pdf$/i, '').trim() };
+}
+
 // Sorts as numbers, so 1.9 comes before 1.10.
 export function compareCodes(a, b) {
   const [aUnit, aPart] = a.split('-')[0].split('.').map(Number);

@@ -6,6 +6,7 @@ import {
   parseQuestionPath,
   pickRandom,
   progressStats,
+  rowFromManifest,
   unitsOf,
 } from '../src/questions.js';
 
@@ -41,6 +42,32 @@ test('parseQuestionName reads either-answer and no-answer questions', () => {
 test('parseQuestionName keeps the paper name apart from the answer', () => {
   assert.equal(parseQuestionName('May 2003 HL Q7 C+D.png').paper, 'May 2003 HL Q7');
   assert.equal(parseQuestionName('May 2021 HL TZ2 Q35 1 of 2 A.png').paper, 'May 2021 HL TZ2 Q35 1 of 2');
+});
+
+test('filterQuestions narrows by subject, paper and level', () => {
+  const list = [
+    { id: 'p', subject: 'Physics', unit: 'A', year: 2020 },
+    { id: 's', subject: 'Chemistry', unit: 'B', year: 0, paper_type: '1-A', levels: ['SL', 'HL'] },
+    { id: 'h', subject: 'Chemistry', unit: 'B', year: 0, paper_type: '2', levels: ['HL only'] },
+  ];
+  const ids = (extra) => filterQuestions(list, {}, '', 'all', 0, extra).map((q) => q.id);
+  assert.deepEqual(ids({ subject: 'Physics' }), ['p']);
+  assert.deepEqual(ids({ subject: 'Chemistry', paperType: '2' }), ['h']);
+  assert.deepEqual(ids({ subject: 'Chemistry', level: 'SL' }), ['s']);
+  assert.deepEqual(ids({ subject: 'Chemistry', level: 'HL' }), ['s', 'h']);
+});
+
+test('rowFromManifest maps a Chemistry entry', () => {
+  const row = rowFromManifest({
+    id: 'x', subject: 'Chemistry', topic: 'Redox', subtopic: 'Redox', paper: '1-A',
+    levels: ['SL'], letter: 'B', source: 'SL Paper 1-A Redox.pdf', files: { question: 'x-q.png', answer: 'x-a.png' },
+  });
+  assert.equal(row.unit, 'Redox');
+  assert.equal(row.answer, 'B');
+  assert.equal(row.paper_type, '1-A');
+  assert.equal(row.has_answer_image, true);
+  assert.equal(row.has_report, false);
+  assert.equal(row.year, 0);
 });
 
 test('filterQuestions can hide older years', () => {

@@ -49,7 +49,7 @@ export async function loadQuestions() {
   for (let from = 0; ; from += pageSize) {
     const { data, error } = await client
       .from('questions')
-      .select('id, unit, topic, paper, year, answer')
+      .select('id, subject, unit, topic, paper, year, answer, paper_type, levels, has_answer_image, has_report')
       .order('id')
       .range(from, from + pageSize - 1);
     if (error) throw error;
@@ -59,8 +59,8 @@ export async function loadQuestions() {
 }
 
 // The link stops working after an hour, so it can't be passed around.
-export async function questionImageUrl(id) {
-  const { data, error } = await client.storage.from('questions').createSignedUrl(`${id}.png`, 3600);
+export async function questionImageUrl(name, extension = 'png') {
+  const { data, error } = await client.storage.from('questions').createSignedUrl(`${name}.${extension}`, 3600);
   if (error) throw error;
   return data.signedUrl;
 }
@@ -72,6 +72,30 @@ export async function uploadQuestion(file, question) {
   // An earlier interrupted upload may have stored the image already.
   if (uploadError && String(uploadError.statusCode) !== '409') throw uploadError;
   const { error } = await client.from('questions').insert(question);
+  if (error) throw error;
+}
+
+// Stores a Chemistry image. It may be there already from an interrupted upload.
+export async function uploadQuestionImage(file, name) {
+  const { error } = await client.storage
+    .from('questions')
+    .upload(`${name}.webp`, file, { contentType: 'image/webp' });
+  if (error && String(error.statusCode) !== '409') throw error;
+}
+
+export async function saveQuestionRow(row) {
+  const { error } = await client.from('questions').insert(row);
+  if (error) throw error;
+}
+
+export async function loadNotes() {
+  const { data, error } = await client.from('notes').select('id, subject, group_name, title');
+  if (error) throw error;
+  return data;
+}
+
+export async function saveNote(note) {
+  const { error } = await client.from('notes').insert(note);
   if (error) throw error;
 }
 
@@ -152,6 +176,8 @@ export async function runSecurityCheck(userId, isAdmin) {
     results.push({ label: 'Regular users cannot add questions', safe: question.error?.code === '42501' });
     const sheet = await client.from('worksheets').insert({ code: 'security-check', title: 'x' });
     results.push({ label: 'Regular users cannot add worksheets', safe: sheet.error?.code === '42501' });
+    const note = await client.from('notes').insert({ id: 'security-check', subject: 'x', group_name: 'x', title: 'x' });
+    results.push({ label: 'Regular users cannot add notes', safe: note.error?.code === '42501' });
   }
   return results;
 }

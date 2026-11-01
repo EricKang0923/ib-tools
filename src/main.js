@@ -1,6 +1,7 @@
 // Starts the app: appearance, tabs, login, and saving to the cloud.
 import { startCalculator } from './app.js';
 import { startDeadlines } from './deadlines-app.js';
+import { openNotes, startNotes } from './notes-app.js';
 import { openPractice, startPractice } from './practice-app.js';
 import { delayedSaver } from './saver.js';
 import { openWorksheets, startWorksheets } from './worksheets-app.js';
@@ -109,9 +110,11 @@ async function openApp(cloud, user) {
   };
   startPractice(practice, changePractice, { cloud, isAdmin });
   startWorksheets(practice.worksheets, changePractice, { cloud, isAdmin });
+  startNotes({ cloud, isAdmin });
   const openPracticeTab = () => {
     openPractice();
     openWorksheets();
+    openNotes();
   };
   for (const button of document.querySelectorAll('.tabs button')) {
     button.addEventListener('click', () => {

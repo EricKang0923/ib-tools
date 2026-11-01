@@ -4,6 +4,7 @@ import {
   parseQuestionPath,
   pickRandom,
   progressStats,
+  rowFromManifest,
   unitsOf,
 } from './questions.js';
 
@@ -17,18 +18,81 @@ let notifyChange = () => {};
 let loaded = false;
 let showToken = 0;
 
+const NOTES = {
+  Physics: 'Older questions may not match the current syllabus. Answers come from the file names and were not checked against official mark schemes.',
+  Chemistry: 'The Questionbank uses older syllabus topics, so some questions may not match the current syllabus. Specimen markschemes show whole pages, which can include the next question.',
+};
+
+function isChemistry() {
+  return $('p-subject').value === 'Chemistry';
+}
+
+function extraFilters() {
+  return {
+    subject: $('p-subject').value,
+    paperType: isChemistry() ? $('p-paper').value : '',
+    level: isChemistry() ? $('p-level').value : '',
+  };
+}
+
+function minYear() {
+  return isChemistry() ? 0 : Number($('p-year').value);
+}
+
 function matching() {
-  return filterQuestions(questions, progress, $('p-unit').value, $('p-status').value, Number($('p-year').value));
+  return filterQuestions(questions, progress, $('p-unit').value, $('p-status').value, minYear(), extraFilters());
 }
 
 function renderStats() {
-  const chosen = filterQuestions(questions, {}, $('p-unit').value, 'all', Number($('p-year').value));
+  const chosen = filterQuestions(questions, {}, $('p-unit').value, 'all', minYear(), extraFilters());
   const { total, right, wrong, left } = progressStats(chosen, progress);
   $('p-stats').textContent = `${total} questions · ${right} right · ${wrong} wrong · ${left} not tried`;
 }
 
 function renderUnits() {
-  $('p-unit').replaceChildren(new Option('All units', ''), ...unitsOf(questions).map((unit) => new Option(unit, unit)));
+  const units = unitsOf(questions.filter((question) => question.subject === $('p-subject').value));
+  $('p-unit').replaceChildren(new Option('All units', ''), ...units.map((unit) => new Option(unit, unit)));
+}
+
+function renderSubjectControls() {
+  const chem = isChemistry();
+  $('p-paper-row').hidden = !chem;
+  $('p-level-row').hidden = !chem;
+  $('p-year-row').hidden = chem;
+  $('p-note').textContent = NOTES[$('p-subject').value];
+}
+
+function hideImage(image) {
+  image.hidden = true;
+  image.removeAttribute('src');
+}
+
+async function showImage(image, name, label, token) {
+  try {
+    const url = await cloud.questionImageUrl(name, 'webp');
+    if (token !== showToken) return;
+    image.src = url;
+    image.alt = label;
+    image.hidden = false;
+  } catch (error) {
+    if (token === showToken) $('p-error').textContent = `Could not load the image: ${error.message}`;
+  }
+}
+
+function reveal() {
+  const token = showToken;
+  const parts = [];
+  if (current.answer) parts.push(`Answer: ${current.answer}`);
+  parts.push(`(${current.paper})`);
+  $('p-answer').textContent = parts.join('  ');
+  $('p-answer').hidden = false;
+  $('p-reveal').hidden = true;
+  $('p-mark').hidden = false;
+  if (current.has_answer_image) showImage($('p-answer-image'), `${current.id}-a`, 'Markscheme', token);
+  if (current.has_report) {
+    $('p-report-label').hidden = false;
+    showImage($('p-report-image'), `${current.id}-r`, 'Examiner report', token);
+  }
 }
 
 async function showQuestion(question) {
@@ -37,8 +101,10 @@ async function showQuestion(question) {
   $('p-answer').hidden = true;
   $('p-reveal').hidden = !question;
   $('p-mark').hidden = true;
-  $('p-image').hidden = true;
-  $('p-image').removeAttribute('src');
+  $('p-report-label').hidden = true;
+  hideImage($('p-image'));
+  hideImage($('p-answer-image'));
+  hideImage($('p-report-image'));
   $('p-error').textContent = '';
   if (!question) {
     $('p-meta').textContent = 'No questions match these filters.';
@@ -46,7 +112,9 @@ async function showQuestion(question) {
   }
   $('p-meta').textContent = `${question.unit}${question.topic ? ` / ${question.topic}` : ''}`;
   try {
-    const url = await cloud.questionImageUrl(question.id);
+    // Physics images were uploaded as PNG, Chemistry images are smaller WebP files.
+    const extension = question.subject === 'Chemistry' ? 'webp' : 'png';
+    const url = await cloud.questionImageUrl(question.id, extension);
     // A newer question may have been chosen while this link was loading.
     if (token !== showToken) return;
     $('p-image').src = url;
@@ -95,7 +163,7 @@ async function uploadFolder(files) {
           const id = await sha256(file);
           if (!existing.has(id)) {
             existing.add(id);
-            const question = { id, ...parsed };
+            const question = { id, subject: 'Physics', ...parsed };
             await cloud.uploadQuestion(file, question);
             questions.push(question);
           }
@@ -116,6 +184,46 @@ async function uploadFolder(files) {
   if (!current) nextQuestion();
 }
 
+// Uploads a folder made by the split tool: images plus manifest files that describe them.
+async function uploadChemistryFolder(files) {
+  const status = $('p-chem-status');
+  const byName = new Map([...files].map((file) => [file.name, file]));
+  const manifests = [...files].filter((file) => /^manifest.*\.json$/.test(file.name));
+  const entries = [];
+  for (const file of manifests) entries.push(...JSON.parse(await file.text()).questions);
+  const existing = new Set(questions.map((question) => question.id));
+  const todo = entries.filter((entry) => !existing.has(entry.id));
+  let failed = 0;
+  let done = 0;
+  let index = 0;
+
+  async function worker() {
+    while (index < todo.length) {
+      const entry = todo[index];
+      index += 1;
+      try {
+        await cloud.uploadQuestionImage(byName.get(entry.files.question), entry.id);
+        if (entry.files.answer) await cloud.uploadQuestionImage(byName.get(entry.files.answer), `${entry.id}-a`);
+        if (entry.files.report) await cloud.uploadQuestionImage(byName.get(entry.files.report), `${entry.id}-r`);
+        const row = rowFromManifest(entry);
+        await cloud.saveQuestionRow(row);
+        questions.push(row);
+      } catch (error) {
+        failed += 1;
+        console.error(entry.source, error);
+      }
+      done += 1;
+      status.textContent = `Uploading ${done} of ${todo.length}... Do not close this window.`;
+    }
+  }
+
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  const total = questions.filter((question) => question.subject === 'Chemistry').length;
+  status.textContent = `Finished. ${total} Chemistry questions in total, ${failed} failed. If any failed, choose the same folder again.`;
+  renderUnits();
+  renderStats();
+}
+
 // Questions load the first time the tab opens, so other tabs stay fast.
 export async function openPractice() {
   if (loaded) return;
@@ -123,6 +231,7 @@ export async function openPractice() {
   $('p-meta').textContent = 'Loading questions...';
   try {
     questions = await cloud.loadQuestions();
+    renderSubjectControls();
     renderUnits();
     renderStats();
     if (questions.length === 0) {
@@ -144,18 +253,24 @@ export function startPractice(saved, onChange, options) {
   notifyChange = onChange;
   $('p-admin').hidden = !options.isAdmin;
 
-  for (const id of ['p-unit', 'p-status', 'p-year']) {
+  for (const id of ['p-unit', 'p-status', 'p-year', 'p-paper', 'p-level']) {
     $(id).addEventListener('change', () => {
       renderStats();
       nextQuestion();
     });
   }
+  $('p-subject').addEventListener('change', () => {
+    renderSubjectControls();
+    renderUnits();
+    renderStats();
+    nextQuestion();
+  });
   $('p-next').addEventListener('click', nextQuestion);
-  $('p-reveal').addEventListener('click', () => {
-    $('p-answer').textContent = `Answer: ${current.answer}  (${current.paper})`;
-    $('p-answer').hidden = false;
-    $('p-reveal').hidden = true;
-    $('p-mark').hidden = false;
+  $('p-reveal').addEventListener('click', reveal);
+  $('p-chem-folder').addEventListener('change', async () => {
+    await openPractice();
+    await uploadChemistryFolder($('p-chem-folder').files);
+    $('p-chem-folder').value = '';
   });
   $('p-right').addEventListener('click', () => mark('right'));
   $('p-wrong').addEventListener('click', () => mark('wrong'));
