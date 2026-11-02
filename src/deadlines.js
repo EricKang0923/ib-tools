@@ -11,6 +11,7 @@ export const SUBJECTS = [
   'English A',
   'English B',
   'French',
+  'Geography',
   'Japanese',
   'Korean',
   'Math AA',

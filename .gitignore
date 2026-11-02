@@ -3,4 +3,5 @@ node_modules/
 .env.*
 data/school-deadlines.json
 supabase/seed-school-deadlines.sql
+supabase/seed-more-deadlines.sql
 supabase/add-admin.sql

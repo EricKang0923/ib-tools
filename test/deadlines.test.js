@@ -127,7 +127,7 @@ test('visibleDeadlines keeps a subject the user typed themselves', () => {
 
 test('the subject list has unique names and the requested subjects', () => {
   assert.equal(new Set(SUBJECTS).size, SUBJECTS.length);
-  for (const name of ['French', 'Chinese A', 'Chinese B', 'English A', 'English B', 'Japanese', 'Biology', 'Math AA']) {
+  for (const name of ['French', 'Chinese A', 'Chinese B', 'English A', 'English B', 'Japanese', 'Biology', 'Math AA', 'Geography']) {
     assert.ok(SUBJECTS.includes(name));
   }
   for (const old of ['Math', 'English', 'Chinese']) {
